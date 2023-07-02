@@ -11,15 +11,7 @@ from collections import defaultdict
 import math
 from datetime import datetime
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "prs_project.settings")
-
-import django
-
-
-django.setup()
-
-from analytics.models import Rating
-
+#os.environ.setdefault("DJANGO_SETTINGS_MODULE", "prs_project.settings")
 
 def ensure_dir(file_path):
     directory = os.path.dirname(file_path)
@@ -292,19 +284,14 @@ class MatrixFactorization(object):
             log_file.write(logtext + '\n')
 
 
-def load_all_ratings(min_ratings=1, csv=None):
+def load_all_ratings(csv, min_ratings=1):
     '''Changed the function from the default located here:
     https://github.com/practical-recommender-systems/moviegeek/blob/master/builder/matrix_factorization_calculator.py
     Specifically, added functionality to handle loading CSVs as opposed to a Django database.
     As the code is being ported to Colab, this offers the end-user (me) more utility.
     '''
     columns = ['user_id', 'movie_id', 'rating', 'type', 'rating_timestamp']
-
-    if csv == None:
-        ratings_data = Rating.objects.all().values(*columns)
-        ratings = pd.DataFrame.from_records(ratings_data, columns=columns)
-    else:
-        ratings = pd.read_csv(csv, columns=columns)
+    ratings = pd.read_csv(csv, header='infer')
     
     user_count = ratings[['user_id', 'movie_id']].groupby('user_id').count()
     user_count = user_count.reset_index()
