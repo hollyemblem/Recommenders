@@ -6,3 +6,5 @@ from builder import matrix_factorization_calculator as mf
 
 df = pd.read_csv("data/movies.csv")
 print(df.head())
+
+#To do  - inner join the pandas datasets
