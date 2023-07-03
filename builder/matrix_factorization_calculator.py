@@ -284,21 +284,21 @@ class MatrixFactorization(object):
             log_file.write(logtext + '\n')
 
 
-def load_all_ratings(csv, min_ratings=1):
+def load_all_ratings(dataframe, min_ratings=1):
     '''Changed the function from the default located here:
     https://github.com/practical-recommender-systems/moviegeek/blob/master/builder/matrix_factorization_calculator.py
     Specifically, added functionality to handle loading CSVs as opposed to a Django database.
     As the code is being ported to Colab, this offers the end-user (me) more utility.
     '''
-    columns = ['user_id', 'movie_id', 'rating', 'type', 'rating_timestamp']
-    ratings = pd.read_csv(csv, header='infer')
+    columns = ['userId', 'movieId', 'rating', 'genres','timestamp']
+    ratings = dataframe
     
-    user_count = ratings[['user_id', 'movie_id']].groupby('user_id').count()
+    user_count = ratings[['userId', 'movieId']].groupby('userId').count()
     user_count = user_count.reset_index()
-    user_ids = user_count[user_count['movie_id'] > min_ratings]['user_id']
-    ratings = ratings[ratings['user_id'].isin(user_ids)]
+    user_ids = user_count[user_count['movieId'] > min_ratings]['userId']
+    ratings = ratings[ratings['userId'].isin(user_ids)]
 
-    ratings['rating'] = ratings['rating'].astype(Decimal)
+    #ratings['rating'] = ratings['rating']
     return ratings
 
 
