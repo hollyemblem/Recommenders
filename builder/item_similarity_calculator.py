@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import psycopg2
+#import psycopg2
 import sqlite3
 import logging
 from tqdm import tqdm
@@ -8,16 +8,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import coo_matrix
 from datetime import datetime
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "prs_project.settings")
+#os.environ.setdefault("DJANGO_SETTINGS_MODULE", "prs_project.settings")
 
-import django
+#import django
 
-django.setup()
+#django.setup()
 
 
-from recommender.models import Similarity
-from analytics.models import Rating
-from prs_project import settings
+#from recommender.models import Similarity
+##from analytics.models import Rating
+#from prs_project import settings
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
 logger = logging.getLogger('Item simialarity calculator')
@@ -28,25 +28,24 @@ class ItemSimilarityMatrixBuilder(object):
     def __init__(self, min_overlap=15, min_sim=0.2):
         self.min_overlap = min_overlap
         self.min_sim = min_sim
-        self.db = settings.DATABASES['default']['ENGINE']
 
 
-    def build(self, ratings, save=True):
+    def build(self, ratings, save=False):
 
         logger.debug("Calculating similarities ... using {} ratings".format(len(ratings)))
         start_time = datetime.now()
 
         logger.debug("Creating ratings matrix")
         ratings['rating'] = ratings['rating'].astype(float)
-        ratings['avg'] = ratings.groupby('user_id')['rating'].transform(lambda x: normalize(x))
+        ratings['avg'] = ratings.groupby('userId')['rating'].transform(lambda x: normalize(x))
 
         ratings['avg'] = ratings['avg'].astype(float)
-        ratings['user_id'] = ratings['user_id'].astype('category')
-        ratings['movie_id'] = ratings['movie_id'].astype('category')
+        ratings['userId'] = ratings['userId'].astype('category')
+        ratings['movieId'] = ratings['movieId'].astype('category')
 
         coo = coo_matrix((ratings['avg'].astype(float),
-                          (ratings['movie_id'].cat.codes.copy(),
-                           ratings['user_id'].cat.codes.copy())))
+                          (ratings['userId'].cat.codes.copy(),
+                           ratings['userId'].cat.codes.copy())))
 
         logger.debug("Calculating overlaps between the items")
         overlap_matrix = coo.astype(bool).astype(int).dot(coo.transpose().astype(bool).astype(int))
@@ -71,7 +70,7 @@ class ItemSimilarityMatrixBuilder(object):
         cor = cor.multiply(cor > self.min_sim)
         cor = cor.multiply(overlap_matrix > self.min_overlap)
 
-        movies = dict(enumerate(ratings['movie_id'].cat.categories))
+        movies = dict(enumerate(ratings['movieId'].cat.categories))
         logger.debug('Correlation is finished, done in {} seconds'.format(datetime.now() - start_time))
         if save:
 
@@ -191,8 +190,17 @@ class ItemSimilarityMatrixBuilder(object):
 def main():
     logger.info("Calculation of item similarity")
 
-    all_ratings = load_all_ratings()
-    ItemSimilarityMatrixBuilder(min_overlap=20, min_sim=0.0).build(all_ratings)
+    
+    ##Dataset preparation - This needs to swap out.
+    movies_df = pd.read_csv("data/movies.csv")
+    ratings_df = pd.read_csv("data/ratings.csv")
+    combined_ratings_df = pd.merge(ratings_df, movies_df, on='movieId', how='inner')
+    combined_ratings_reduced_df = combined_ratings_df[['userId', 'movieId', 'rating', 'genres','timestamp']]
+
+    #Obtaining ratings
+
+    #all_ratings = mf.load_all_ratings(combined_ratings_reduced_df)
+    ItemSimilarityMatrixBuilder(min_overlap=20, min_sim=0.0).build(combined_ratings_reduced_df)
 
 def normalize(x):
     x = x.astype(float)
@@ -205,17 +213,21 @@ def normalize(x):
     return (x - x_mean) / (x.max() - x.min())
 
 
-def load_all_ratings(min_ratings=1):
-    columns = ['user_id', 'movie_id', 'rating', 'type']
-
-    ratings_data = Rating.objects.all().values(*columns)
-
-    ratings = pd.DataFrame.from_records(ratings_data, columns=columns)
-    user_count = ratings[['user_id', 'movie_id']].groupby('user_id').count()
+def load_all_ratings(dataframe, min_ratings=1):
+    '''Changed the function from the default located here:
+    https://github.com/practical-recommender-systems/moviegeek/blob/master/builder/matrix_factorization_calculator.py
+    Specifically, added functionality to handle loading CSVs as opposed to a Django database.
+    As the code is being ported to Colab, this offers the end-user (me) more utility.
+    '''
+    columns = ['userId', 'movieId', 'rating', 'genres','timestamp']
+    ratings = dataframe
+    
+    user_count = ratings[['userId', 'movieId']].groupby('userId').count()
     user_count = user_count.reset_index()
-    user_ids = user_count[user_count['movie_id'] > min_ratings]['user_id']
-    ratings = ratings[ratings['user_id'].isin(user_ids)]
-    ratings['rating'] = ratings['rating'].astype(float)
+    user_ids = user_count[user_count['movieId'] > min_ratings]['userId']
+    ratings = ratings[ratings['userId'].isin(user_ids)]
+
+    #ratings['rating'] = ratings['rating']
     return ratings
 
 if __name__ == '__main__':
