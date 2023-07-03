@@ -13,5 +13,10 @@ combined_ratings_reduced_df = combined_ratings_df[['userId', 'movieId', 'rating'
 
 all_ratings = mf.load_all_ratings(combined_ratings_reduced_df)
 
-cor, movies = isc.ItemSimilarityMatrixBuilder.build(all_ratings, save=False)
+# Create an instance of ItemSimilarityMatrixBuilder
+similarity_build = isc.ItemSimilarityMatrixBuilder()
+
+# Call the similarity_build() method on the instance
+cor, movies = similarity_build.build(all_ratings)
+
 print(cor)
