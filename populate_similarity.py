@@ -19,4 +19,3 @@ similarity_build = isc.ItemSimilarityMatrixBuilder()
 # Call the similarity_build() method on the instance
 cor, movies = similarity_build.build(all_ratings)
 
-print(cor)

@@ -27,7 +27,6 @@ class ItemSimilarityMatrixBuilder(object):
 
     def __init__(self, min_overlap=15, min_sim=0.2):
         self.min_overlap = min_overlap
-        self.min_sim = min_sim
 
 
     def build(self, ratings, save=False):
@@ -64,6 +63,7 @@ class ItemSimilarityMatrixBuilder(object):
 
         start_time = datetime.now()
         cor = cosine_similarity(coo, dense_output=False)
+        print(cor)
         # cor = rp.corr(method='pearson', min_periods=self.min_overlap)
         # cor = (cosine(rp.T))
 
