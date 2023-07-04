@@ -27,6 +27,7 @@ class ItemSimilarityMatrixBuilder(object):
 
     def __init__(self, min_overlap=15, min_sim=0.2):
         self.min_overlap = min_overlap
+        self.min_sim = min_sim
 
 
     def build(self, ratings, save=False):
@@ -36,9 +37,15 @@ class ItemSimilarityMatrixBuilder(object):
 
         logger.debug("Creating ratings matrix")
         ratings['rating'] = ratings['rating'].astype(float)
-        ratings['avg'] = ratings.groupby('userId')['rating'].transform(lambda x: normalize(x))
 
+        '''
+2 Normalizes the ratings based on the user’s average and adds it to a column of data.
+ You use the method normalize to do this.'''
+        ratings['avg'] = ratings.groupby('userId')['rating'].transform(lambda x: normalize(x))
         ratings['avg'] = ratings['avg'].astype(float)
+
+        '''Converts the user_ids as well as the movie_ids to categories. 
+        This needs to be done to use the sparse matrix.'''
         ratings['userId'] = ratings['userId'].astype('category')
         ratings['movieId'] = ratings['movieId'].astype('category')
 
@@ -63,7 +70,6 @@ class ItemSimilarityMatrixBuilder(object):
 
         start_time = datetime.now()
         cor = cosine_similarity(coo, dense_output=False)
-        print(cor)
         # cor = rp.corr(method='pearson', min_periods=self.min_overlap)
         # cor = (cosine(rp.T))
 
@@ -82,7 +88,9 @@ class ItemSimilarityMatrixBuilder(object):
                 self._save_with_django(cor, movies)
 
             logger.debug('save finished, done in {} seconds'.format(datetime.now() - start_time))
-
+        
+        #Converting cor to array
+        array_example = cor.toarray()
         return cor, movies
 
     def _save_similarities(self, sm, index, created=datetime.now()):
