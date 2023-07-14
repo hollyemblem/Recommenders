@@ -7,6 +7,7 @@ from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import coo_matrix
 from datetime import datetime
+import numpy as np
 
 #os.environ.setdefault("DJANGO_SETTINGS_MODULE", "prs_project.settings")
 
@@ -30,7 +31,7 @@ class ItemSimilarityMatrixBuilder(object):
         self.min_sim = min_sim
 
 
-    def build(self, ratings, save=False):
+    def build(self, ratings, save=True):
 
         logger.debug("Calculating similarities ... using {} ratings".format(len(ratings)))
         start_time = datetime.now()
@@ -38,20 +39,25 @@ class ItemSimilarityMatrixBuilder(object):
         logger.debug("Creating ratings matrix")
         ratings['rating'] = ratings['rating'].astype(float)
 
+
         '''
 2 Normalizes the ratings based on the user’s average and adds it to a column of data.
  You use the method normalize to do this.'''
         ratings['avg'] = ratings.groupby('userId')['rating'].transform(lambda x: normalize(x))
         ratings['avg'] = ratings['avg'].astype(float)
 
+
         '''Converts the user_ids as well as the movie_ids to categories. 
         This needs to be done to use the sparse matrix.'''
         ratings['userId'] = ratings['userId'].astype('category')
         ratings['movieId'] = ratings['movieId'].astype('category')
 
+
         coo = coo_matrix((ratings['avg'].astype(float),
-                          (ratings['userId'].cat.codes.copy(),
+                          (ratings['movieId'].cat.codes.copy(),
                            ratings['userId'].cat.codes.copy())))
+
+        print(coo)
 
         logger.debug("Calculating overlaps between the items")
         overlap_matrix = coo.astype(bool).astype(int).dot(coo.transpose().astype(bool).astype(int))
@@ -78,19 +84,11 @@ class ItemSimilarityMatrixBuilder(object):
 
         movies = dict(enumerate(ratings['movieId'].cat.categories))
         logger.debug('Correlation is finished, done in {} seconds'.format(datetime.now() - start_time))
-        if save:
-
+        if save == True:
             start_time = datetime.now()
             logger.debug('save starting')
-            if self.db == 'django.db.backends.postgresql':
-                self._save_similarities(cor, movies)
-            else:
-                self._save_with_django(cor, movies)
-
+            self._save_similarities(cor, movies)
             logger.debug('save finished, done in {} seconds'.format(datetime.now() - start_time))
-        
-        #Converting cor to array
-        array_example = cor.toarray()
         return cor, movies
 
     def _save_similarities(self, sm, index, created=datetime.now()):
@@ -102,15 +100,19 @@ class ItemSimilarityMatrixBuilder(object):
         start_time = datetime.now()
         coo = coo_matrix(sm)
         csr = coo.tocsr()
+        x_list = []
+        y_list = []
+        created_list = []
+        sim_list = []
 
         logger.debug('instantiation of coo_matrix in {} seconds'.format(datetime.now() - start_time))
 
-        query = "insert into similarity (created, source, target, similarity) values %s;"
+        #query = "insert into similarity (created, source, target, similarity) values %s;"
 
-        conn = self._get_conn()
-        cur = conn.cursor()
+        #conn = self._get_conn()
+        #cur = conn.cursor()
 
-        cur.execute('truncate table similarity')
+        #cur.execute('truncate table similarity')
 
         logger.debug('{} similarities to save'.format(coo.count_nonzero()))
         xs, ys = coo.nonzero()
@@ -124,18 +126,33 @@ class ItemSimilarityMatrixBuilder(object):
             if sim < self.min_sim:
                 continue
 
-            if len(sims) == 500000:
-                psycopg2.extras.execute_values(cur, query, sims)
-                sims = []
-                logger.debug("{} saved in {}".format(no_saved,
-                                                     datetime.now() - start_time))
+            #if len(sims) == 500000:
+                #sims = []
+                #psycopg2.extras.execute_values(cur, query, sims)
+                #logger.debug("{} saved in {}".format(no_saved,
+                 #                                    datetime.now() - start_time))
 
-            new_similarity = (str(created), index[x], index[y], sim)
-            no_saved += 1
-            sims.append(new_similarity)
 
-        psycopg2.extras.execute_values(cur, query, sims, template=None, page_size=1000)
-        conn.commit()
+            #new_similarity = (str(created), index[x], index[y], sim)
+            #no_saved += 1
+            #sims.append(new_similarity)
+            print(x)
+            x_list.append(index[x])
+            y_list.append(index[y])
+            created_list.append(created)
+            sim_list.append(sim)
+
+        #psycopg2.extras.execute_values(cur, query, sims, template=None, page_size=1000)
+        #conn.commit()
+
+        print(len(x_list))
+        sim_dataframe = pd.DataFrame(
+            {'created': x_list,
+            'source': y_list,
+            'target': created_list,
+            'similarity':sim_list
+            })
+        sim_dataframe.to_csv("Testing")
         logger.debug('{} Similarity items saved, done in {} seconds'.format(no_saved, datetime.now() - start_time))
 
     @staticmethod

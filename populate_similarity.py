@@ -9,13 +9,15 @@ ratings_df = pd.read_csv("data/ratings.csv")
 combined_ratings_df = pd.merge(ratings_df, movies_df, on='movieId', how='inner')
 combined_ratings_reduced_df = combined_ratings_df[['userId', 'movieId', 'rating', 'genres','timestamp']]
 
+
+
 #Obtaining ratings
 
 all_ratings = mf.load_all_ratings(combined_ratings_reduced_df)
 
 # Create an instance of ItemSimilarityMatrixBuilder
-similarity_build = isc.ItemSimilarityMatrixBuilder()
+similarity_build = isc.ItemSimilarityMatrixBuilder(min_overlap=2, min_sim=0.10)
 
 # Call the similarity_build() method on the instance
-cor, movies = similarity_build.build(all_ratings)
+cor, movies = similarity_build.build(all_ratings, save=True)
 
