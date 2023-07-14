@@ -16,8 +16,9 @@ combined_ratings_reduced_df = combined_ratings_df[['userId', 'movieId', 'rating'
 all_ratings = mf.load_all_ratings(combined_ratings_reduced_df)
 
 # Create an instance of ItemSimilarityMatrixBuilder
-similarity_build = isc.ItemSimilarityMatrixBuilder(min_overlap=15, min_sim=0.20)
+similarity_build = isc.ItemSimilarityMatrixBuilder(min_overlap=15, min_sim=0.20, csv_name="cosine_similarities")
 
 # Call the similarity_build() method on the instance
 cor, movies = similarity_build.build(all_ratings, save=True)
 
+##Collaborative filtering - Implement for a user 'helle'

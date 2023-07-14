@@ -26,9 +26,10 @@ logger = logging.getLogger('Item simialarity calculator')
 
 class ItemSimilarityMatrixBuilder(object):
 
-    def __init__(self, min_overlap=15, min_sim=0.2):
+    def __init__(self, min_overlap=15, min_sim=0.2, csv_name='similarities'):
         self.min_overlap = min_overlap
         self.min_sim = min_sim
+        self.csv_name = csv_name
 
 
     def build(self, ratings, save=True):
@@ -142,14 +143,13 @@ class ItemSimilarityMatrixBuilder(object):
 
         #psycopg2.extras.execute_values(cur, query, sims, template=None, page_size=1000)
         #conn.commit()
-
         sim_dataframe = pd.DataFrame(
             {'created': created_list,
             'source': x_list,
             'target': y_list,
             'similarity':sim_list
             })
-        sim_dataframe.to_csv("Testing")
+        sim_dataframe.to_csv(str(self.csv_name))
         logger.debug('{} Similarity items saved, done in {} seconds'.format(no_saved, datetime.now() - start_time))
 
     @staticmethod
