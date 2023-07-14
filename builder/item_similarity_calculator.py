@@ -57,7 +57,6 @@ class ItemSimilarityMatrixBuilder(object):
                           (ratings['movieId'].cat.codes.copy(),
                            ratings['userId'].cat.codes.copy())))
 
-        print(coo)
 
         logger.debug("Calculating overlaps between the items")
         overlap_matrix = coo.astype(bool).astype(int).dot(coo.transpose().astype(bool).astype(int))
@@ -136,7 +135,6 @@ class ItemSimilarityMatrixBuilder(object):
             #new_similarity = (str(created), index[x], index[y], sim)
             #no_saved += 1
             #sims.append(new_similarity)
-            print(x)
             x_list.append(index[x])
             y_list.append(index[y])
             created_list.append(created)
@@ -145,11 +143,10 @@ class ItemSimilarityMatrixBuilder(object):
         #psycopg2.extras.execute_values(cur, query, sims, template=None, page_size=1000)
         #conn.commit()
 
-        print(len(x_list))
         sim_dataframe = pd.DataFrame(
-            {'created': x_list,
-            'source': y_list,
-            'target': created_list,
+            {'created': created_list,
+            'source': x_list,
+            'target': y_list,
             'similarity':sim_list
             })
         sim_dataframe.to_csv("Testing")
